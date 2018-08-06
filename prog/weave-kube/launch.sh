@@ -163,6 +163,7 @@ post_start_actions &
      --ipalloc-range=$IPALLOC_RANGE $NICKNAME_ARG \
      --ipalloc-init $IPALLOC_INIT \
      --conn-limit=$CONN_LIMIT \
+     --restart-sentinel=${RESTART_SENTINEL:-restart.sentinel} \
      $WEAVE_NPC_OPTS \
      $NO_MASQ_LOCAL_OPT \
      "$@" \

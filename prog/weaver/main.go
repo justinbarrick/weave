@@ -169,6 +169,7 @@ func main() {
 		discoveryEndpoint  string
 		token              string
 		advertiseAddress   string
+		restartSentinel    string
 		pluginConfig       plugin.Config
 		defaultDockerHost  = getenvOrDefault("DOCKER_HOST", "unix:///var/run/docker.sock")
 	)
@@ -216,6 +217,7 @@ func main() {
 	mflag.StringVar(&discoveryEndpoint, []string{"-peer-discovery-url"}, "https://cloud.weave.works/api/net", "url for peer discovery")
 	mflag.StringVar(&token, []string{"-token"}, "", "token for peer discovery")
 	mflag.StringVar(&advertiseAddress, []string{"-advertise-address"}, "", "address to advertise for peer discovery")
+	mflag.StringVar(&restartSentinel, []string{"-restart-sentinel"}, weave.DefaultRestartSentinelPath, "Path to the restart sentinel.")
 
 	mflag.BoolVar(&pluginConfig.Enable, []string{"-plugin"}, false, "enable Docker plugin (v1)")
 	mflag.BoolVar(&pluginConfig.EnableV2, []string{"-plugin-v2"}, false, "enable Docker plugin (v2)")
@@ -348,6 +350,7 @@ func main() {
 	defer db.Close()
 
 	router, err := weave.NewNetworkRouter(config, networkConfig, bridgeConfig, name, nickName, overlay, db)
+	router.SetRestartSentinelPath(restartSentinel)
 	checkFatal(err)
 	Log.Println("Our name is", router.Ourself)
 

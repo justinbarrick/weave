@@ -23,6 +23,7 @@ const (
 	HeartbeatTimeout    = MaxMissedHeartbeats * SlowHeartbeat
 	MaxDuration         = time.Duration(math.MaxInt64)
 	NameSize            = mesh.NameSize
+	DefaultRestartSentinelPath = "restart.sentinel"
 	// should be greater than typical ARP cache expiries, i.e. > 3/2 *
 	// /proc/sys/net/ipv4_neigh/*/base_reachable_time_ms on Linux
 	macMaxAge = 10 * time.Minute
@@ -51,6 +52,7 @@ type NetworkRouter struct {
 	weavenet.BridgeConfig
 	Macs *MacCache
 	db   db.DB
+	restartSentinel string
 }
 
 func NewNetworkRouter(config mesh.Config, networkConfig NetworkConfig, bridgeConfig weavenet.BridgeConfig, name mesh.PeerName, nickName string, overlay NetworkOverlay, db db.DB) (*NetworkRouter, error) {
@@ -73,7 +75,12 @@ func NewNetworkRouter(config mesh.Config, networkConfig NetworkConfig, bridgeCon
 			log.Debugln("Expired MAC", mac, "at", peer)
 		})
 	router.Peers.OnGC(func(peer *mesh.Peer) { router.Macs.Delete(peer) })
+	router.SetRestartSentinelPath(DefaultRestartSentinelPath)
 	return router, nil
+}
+
+func (router *NetworkRouter) SetRestartSentinelPath(restartSentinel string) {
+	router.restartSentinel = restartSentinel
 }
 
 // Start listening for TCP connections, locally captured packets, and
@@ -240,7 +247,7 @@ func (router *NetworkRouter) ForgetConnections(peers []string) {
 }
 
 func (router *NetworkRouter) InitialPeers(resume bool, peers []string) ([]string, error) {
-	if _, err := os.Stat("restart.sentinel"); err == nil || resume {
+	if _, err := os.Stat(router.restartSentinel); err == nil || resume {
 		var storedPeers []string
 		if _, err := router.db.Load(peersIdent, &storedPeers); err != nil {
 			return nil, err
@@ -254,7 +261,7 @@ func (router *NetworkRouter) InitialPeers(resume bool, peers []string) ([]string
 }
 
 func (router *NetworkRouter) CreateRestartSentinel() error {
-	sentinel, err := os.Create("restart.sentinel")
+	sentinel, err := os.Create(router.restartSentinel)
 	if err != nil {
 		return fmt.Errorf("error creating sentinel: %v", err)
 	}
